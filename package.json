@@ -1,0 +1,29 @@
+{
+  "name": "p11-alumni-mentorship-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Verified Alumni Mentorship Matching and Engagement Platform",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:worker": "npm run dev --workspace=apps/worker",
+    "seed": "tsx scripts/seed.ts",
+    "test": "npm run test --workspace=apps/api",
+    "test:privacy": "npm run test:privacy --workspace=apps/api",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "keywords": [
+    "alumni",
+    "mentorship",
+    "university",
+    "career-development",
+    "matching-platform"
+  ],
+  "author": "P11 Engineering Organization",
+  "license": "UNLICENSED"
+}
