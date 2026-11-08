@@ -136,3 +136,4 @@ npm run test:privacy
 ## 📄 License
 
 This software is developed for institutional university deployment. Proprietary and confidential.
+

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -8,31 +8,14 @@ import {
   ShieldCheck,
   Building2,
   LogOut,
-  Sparkles,
+  User,
+  Compass,
 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 export function Navbar() {
   const pathname = usePathname();
-  const [currentUser, setCurrentUser] = useState<any>(null);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('user');
-      if (stored) {
-        try {
-          setCurrentUser(JSON.parse(stored));
-        } catch (e) {}
-      }
-    }
-  }, [pathname]);
-
-  const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/auth/login';
-    }
-  };
+  const { user, isAuthenticated, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-white/75 border-b border-black/[0.06] transition-all">
@@ -75,7 +58,7 @@ export function Navbar() {
               }`}
             >
               <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
-              Student
+              Student Portal
             </Link>
 
             <Link
@@ -87,7 +70,7 @@ export function Navbar() {
               }`}
             >
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              Mentor
+              Mentor Portal
             </Link>
 
             <Link
@@ -105,20 +88,22 @@ export function Navbar() {
 
           {/* User Status / Auth Actions */}
           <div className="flex items-center gap-2.5">
-            {currentUser ? (
+            {isAuthenticated && user ? (
               <div className="flex items-center gap-2 bg-neutral-100/80 pl-2.5 pr-1.5 py-1 rounded-full border border-neutral-200/60">
-                <span className="text-[11px] font-medium text-neutral-700">
-                  {currentUser.firstName}
+                <span className="text-[11px] font-semibold text-neutral-800">
+                  {user.firstName} {user.lastName}
                 </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white text-neutral-500 font-medium shadow-xs">
-                  {currentUser.role === 'ALUMNI_MENTOR'
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white text-neutral-600 font-medium shadow-xs">
+                  {user.role === 'ALUMNI_MENTOR'
                     ? 'Mentor'
-                    : currentUser.role === 'ALUMNI_RELATIONS_OFFICER'
+                    : user.role === 'ALUMNI_RELATIONS_OFFICER'
                     ? 'Officer'
+                    : user.role === 'SUPER_ADMIN'
+                    ? 'Admin'
                     : 'Student'}
                 </span>
                 <button
-                  onClick={handleLogout}
+                  onClick={() => logout()}
                   className="p-1 rounded-full hover:bg-neutral-200 text-neutral-400 hover:text-neutral-700 transition"
                   title="Sign out"
                 >
@@ -137,7 +122,7 @@ export function Navbar() {
                   href="/auth/register"
                   className="text-xs font-medium bg-neutral-900 hover:bg-black text-white px-3.5 py-1.5 rounded-full shadow-sm hover:shadow transition"
                 >
-                  Get started
+                  Register
                 </Link>
               </div>
             )}

@@ -44,14 +44,14 @@ export default function HomePage() {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 mb-16">
-          <Link href="/auth/register">
+          <Link href="/auth/login">
             <Button size="lg" variant="primary" className="rounded-full px-7 shadow-sm">
-              Get Started with Institutional ID
+              Sign In with Institutional ID
             </Button>
           </Link>
-          <Link href="/student">
+          <Link href="/auth/login">
             <Button size="lg" variant="secondary" className="rounded-full px-7">
-              Explore Verified Mentors
+              Launch 1-Click Demo Accounts &rarr;
             </Button>
           </Link>
         </div>
