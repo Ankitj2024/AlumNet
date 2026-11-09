@@ -14,6 +14,7 @@
     "dev:worker": "npm run dev --workspace=apps/worker",
     "seed": "tsx scripts/seed.ts",
     "test": "npm run test --workspace=apps/api",
+    "test:coverage": "npm run test:coverage --workspace=apps/api",
     "test:privacy": "npm run test:privacy --workspace=apps/api",
     "lint": "npm run lint --workspaces --if-present"
   },
@@ -25,5 +26,8 @@
     "matching-platform"
   ],
   "author": "P11 Engineering Organization",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@playwright/test": "^1.65.0"
+  }
 }

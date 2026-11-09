@@ -2,7 +2,7 @@ import { AlumnusModel } from '../models/Alumnus.model.js';
 import { MentorCapacityModel } from '../models/MentorCapacity.model.js';
 import { StudentProfileModel } from '../models/StudentProfile.model.js';
 import { AvailabilityWindowModel } from '../models/AvailabilityWindow.model.js';
-import { ProgrammeSettingsModel } from '../models/ProgrammeSettings.model.js';
+import { programmeSettingsService } from './programmeSettings.service.js';
 import { serializeStudentViewAlumnus } from '../serializers/alumni.serializer.js';
 import { PROGRAMME_DEFAULTS } from '@p11/shared';
 
@@ -38,15 +38,9 @@ export class MatchingEngineService {
       return [];
     }
 
-    // Retrieve active matching weights from ProgrammeSettings or fallback to defaults
-    const settings = await ProgrammeSettingsModel.findOne().sort({ createdAt: -1 });
-    const weights = settings?.matchingWeights || {
-      expertiseWeight: PROGRAMME_DEFAULTS.MATCHING_WEIGHTS.EXPERTISE,
-      roleWeight: PROGRAMME_DEFAULTS.MATCHING_WEIGHTS.ROLE,
-      industryWeight: PROGRAMME_DEFAULTS.MATCHING_WEIGHTS.INDUSTRY,
-      mentoringInterestWeight: PROGRAMME_DEFAULTS.MATCHING_WEIGHTS.INTEREST,
-      availabilityWeight: PROGRAMME_DEFAULTS.MATCHING_WEIGHTS.AVAILABILITY,
-    };
+    // Retrieve active matching weights from ProgrammeSettings via cached accessor
+    const settings = await programmeSettingsService.getSettings();
+    const weights = settings.matchingWeights;
 
     // Find all verified, searchable mentors
     const verifiedMentors = await AlumnusModel.find({

@@ -57,7 +57,7 @@ const MentorshipRequestSchema = new Schema<IMentorshipRequestDocument>(
     },
     status: {
       type: String,
-      enum: ['PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED', 'CANCELLED'],
+      enum: ['PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED', 'CANCELLED', 'AUTO_CANCELLED'],
       default: 'PENDING',
       index: true,
     },

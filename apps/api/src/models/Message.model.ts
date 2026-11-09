@@ -4,9 +4,16 @@ export interface IMessageDocument extends Document {
   _id: Types.ObjectId;
   mentorshipId: Types.ObjectId;
   senderId: Types.ObjectId;
-  content: string;
-  piiDetected: boolean;
-  piiTypesDetected: string[];
+  content: string; // Redacted content stored for receiver
+  encryptedContent: string; // AES-256-GCM encrypted original content
+  iv: string;
+  authTag: string;
+  isRedacted: boolean;
+  detectedTypes: string[];
+  piiDetected?: boolean;
+  piiTypesDetected?: string[];
+  senderWarning?: string;
+  isMutualContactUnlocked?: boolean;
   readBy: Array<{
     userId: Types.ObjectId;
     readAt: Date;
@@ -32,13 +39,33 @@ const MessageSchema = new Schema<IMessageDocument>(
       type: String,
       required: true,
     },
-    piiDetected: {
+    encryptedContent: {
+      type: String,
+      required: true,
+    },
+    iv: {
+      type: String,
+      required: true,
+    },
+    authTag: {
+      type: String,
+      required: true,
+    },
+    isRedacted: {
       type: Boolean,
       default: false,
+      index: true,
     },
-    piiTypesDetected: {
+    detectedTypes: {
       type: [String],
       default: [],
+    },
+    senderWarning: {
+      type: String,
+    },
+    isMutualContactUnlocked: {
+      type: Boolean,
+      default: false,
     },
     readBy: [
       {
@@ -58,6 +85,6 @@ const MessageSchema = new Schema<IMessageDocument>(
 );
 
 MessageSchema.index({ mentorshipId: 1, createdAt: 1 });
+MessageSchema.index({ senderId: 1, isRedacted: 1, createdAt: -1 });
 
 export const MessageModel = mongoose.model<IMessageDocument>('Message', MessageSchema);
-

@@ -3,6 +3,7 @@ import { requestController } from '../controllers/request.controller.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { requireRole } from '../middleware/rbac.middleware.js';
 import { validateBody } from '../middleware/validate.middleware.js';
+import { requestCreationLimiter } from '../middleware/rateLimiter.middleware.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { createMentorshipRequestSchema } from '@p11/validation';
 
@@ -11,6 +12,7 @@ const router = Router();
 // Student request creation & management
 router.post(
   '/',
+  requestCreationLimiter,
   authenticate,
   requireRole('STUDENT'),
   validateBody(createMentorshipRequestSchema),

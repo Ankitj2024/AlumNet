@@ -84,3 +84,4 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
     </ProtectedRoute>
   );
 }
+

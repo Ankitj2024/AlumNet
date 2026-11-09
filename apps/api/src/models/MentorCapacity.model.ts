@@ -7,6 +7,7 @@ export interface IMentorCapacityDocument extends Document {
   currentActiveMentees: number;
   isAcceptingRequests: boolean;
   isPaused: boolean;
+  pausedUntil?: Date;
   pauseReason?: string;
   lastUpdated: Date;
   createdAt: Date;
@@ -43,6 +44,10 @@ const MentorCapacitySchema = new Schema<IMentorCapacityDocument>(
     isPaused: {
       type: Boolean,
       default: false,
+      index: true,
+    },
+    pausedUntil: {
+      type: Date,
       index: true,
     },
     pauseReason: {

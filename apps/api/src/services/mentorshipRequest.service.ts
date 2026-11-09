@@ -6,7 +6,10 @@ import { MentorshipModel } from '../models/Mentorship.model.js';
 import { MentorCapacityModel } from '../models/MentorCapacity.model.js';
 import { AlumnusModel } from '../models/Alumnus.model.js';
 import { StudentProfileModel } from '../models/StudentProfile.model.js';
+import { programmeSettingsService } from './programmeSettings.service.js';
 import { auditService } from './audit.service.js';
+import { notificationService } from './notification.service.js';
+import { autoCancelOnFullJob } from '../jobs/backgroundJobs.js';
 
 export class MentorshipRequestService {
   /**
@@ -33,57 +36,83 @@ export class MentorshipRequestService {
       throw new AppError('Mentor has reached maximum active mentee capacity.', 400, ErrorCodes.CAPACITY_EXCEEDED);
     }
 
-    // 1. Throttling Check: Max pending requests
-    const pendingCount = await MentorshipRequestModel.countDocuments({
-      studentId: student._id,
-      status: 'PENDING',
-    });
-    if (pendingCount >= PROGRAMME_DEFAULTS.MAX_PENDING_REQUESTS_PER_STUDENT) {
+    // Retrieve dynamic programme policy settings
+    const settings = await programmeSettingsService.getSettings();
+    const {
+      maxPendingRequestsPerStudent,
+      maxRequestsPerRollingPeriod,
+      rollingPeriodDays,
+      requestExpiryDays,
+    } = settings.requestLimits;
+
+    // 1. Throttling Check: Atomic conditional increment for max pending requests
+    const updatedStudent = await StudentProfileModel.findOneAndUpdate(
+      {
+        _id: student._id,
+        $or: [
+          { pendingRequestsCount: { $lt: maxPendingRequestsPerStudent } },
+          { pendingRequestsCount: { $exists: false } },
+        ],
+      },
+      { $inc: { pendingRequestsCount: 1 } },
+      { new: true }
+    );
+
+    if (!updatedStudent) {
       throw new AppError(
-        `Throttled: You already have ${pendingCount} pending requests (max ${PROGRAMME_DEFAULTS.MAX_PENDING_REQUESTS_PER_STUDENT}).`,
+        `Throttled: You already have ${maxPendingRequestsPerStudent} pending requests.`,
         429,
         ErrorCodes.THROTTLE_LIMIT_REACHED
       );
     }
 
-    // 2. Throttling Check: Rolling window limit
-    const rollingStart = new Date(Date.now() - PROGRAMME_DEFAULTS.ROLLING_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-    const rollingCount = await MentorshipRequestModel.countDocuments({
-      studentId: student._id,
-      createdAt: { $gte: rollingStart },
-    });
-    if (rollingCount >= PROGRAMME_DEFAULTS.MAX_REQUESTS_PER_ROLLING_WINDOW) {
-      throw new AppError(
-        `Throttled: You have reached the limit of ${PROGRAMME_DEFAULTS.MAX_REQUESTS_PER_ROLLING_WINDOW} requests per 7 days.`,
-        429,
-        ErrorCodes.THROTTLE_LIMIT_REACHED
+    let request;
+    try {
+      // 2. Throttling Check: Rolling window limit
+      const rollingStart = new Date(Date.now() - rollingPeriodDays * 24 * 60 * 60 * 1000);
+      const rollingCount = await MentorshipRequestModel.countDocuments({
+        studentId: student._id,
+        createdAt: { $gte: rollingStart },
+      });
+      if (rollingCount >= maxRequestsPerRollingPeriod) {
+        throw new AppError(
+          `Throttled: You have reached the limit of ${maxRequestsPerRollingPeriod} requests per ${rollingPeriodDays} days.`,
+          429,
+          ErrorCodes.THROTTLE_LIMIT_REACHED
+        );
+      }
+
+      // 3. Prevent duplicate active request between same student and mentor
+      const existing = await MentorshipRequestModel.findOne({
+        studentId: student._id,
+        mentorId: mentor._id,
+        status: { $in: ['PENDING', 'ACCEPTED'] },
+      });
+      if (existing) {
+        throw new AppError('An active or pending mentorship already exists with this mentor.', 409, ErrorCodes.CONFLICT);
+      }
+
+      // Auto-expiry according to settings
+      const expiresAt = new Date(Date.now() + requestExpiryDays * 24 * 60 * 60 * 1000);
+
+      request = await MentorshipRequestModel.create({
+        studentId: student._id,
+        mentorId: mentor._id,
+        careerObjective: input.careerObjective,
+        requestMessage: input.requestMessage,
+        preferredTopics: input.preferredTopics,
+        expectedOutcomes: input.expectedOutcomes,
+        preferredAvailability: input.preferredAvailability,
+        status: 'PENDING',
+        expiresAt,
+      });
+    } catch (err) {
+      await StudentProfileModel.updateOne(
+        { _id: student._id, pendingRequestsCount: { $gt: 0 } },
+        { $inc: { pendingRequestsCount: -1 } }
       );
+      throw err;
     }
-
-    // 3. Prevent duplicate active request between same student and mentor
-    const existing = await MentorshipRequestModel.findOne({
-      studentId: student._id,
-      mentorId: mentor._id,
-      status: { $in: ['PENDING', 'ACCEPTED'] },
-    });
-    if (existing) {
-      throw new AppError('An active or pending mentorship already exists with this mentor.', 409, ErrorCodes.CONFLICT);
-    }
-
-    // 7-day auto-expiry
-    const expiresAt = new Date(Date.now() + PROGRAMME_DEFAULTS.REQUEST_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
-
-    const request = await MentorshipRequestModel.create({
-      studentId: student._id,
-      mentorId: mentor._id,
-      careerObjective: input.careerObjective,
-      requestMessage: input.requestMessage,
-      preferredTopics: input.preferredTopics,
-      expectedOutcomes: input.expectedOutcomes,
-      preferredAvailability: input.preferredAvailability,
-      status: 'PENDING',
-      expiresAt,
-    });
 
     await auditService.log({
       actorId: userId,
@@ -92,6 +121,17 @@ export class MentorshipRequestService {
       entityType: 'MentorshipRequest',
       entityId: request._id.toString(),
     });
+
+    if (mentor.userId) {
+      await notificationService.sendNotification({
+        userId: mentor.userId.toString(),
+        type: 'REQUEST_RECEIVED',
+        title: 'New Mentorship Request',
+        message: 'You have received a new mentorship outreach from a student interested in your guidance.',
+        metadata: { requestId: request._id.toString() },
+        idempotencyKey: `notif:req_created:${request._id.toString()}`,
+      });
+    }
 
     return request;
   }
@@ -113,6 +153,11 @@ export class MentorshipRequestService {
     if (!request) {
       throw new AppError('Pending mentorship request not found.', 404, ErrorCodes.NOT_FOUND);
     }
+
+    await StudentProfileModel.updateOne(
+      { _id: request.studentId, pendingRequestsCount: { $gt: 0 } },
+      { $inc: { pendingRequestsCount: -1 } }
+    );
 
     // Atomic conditional update on capacity: guarantees currentActiveMentees < maxActiveMentees
     const updatedCapacity = await MentorCapacityModel.findOneAndUpdate(
@@ -142,6 +187,11 @@ export class MentorshipRequestService {
     request.respondedAt = new Date();
     await request.save();
 
+    await StudentProfileModel.updateOne(
+      { _id: request.studentId, pendingRequestsCount: { $gt: 0 } },
+      { $inc: { pendingRequestsCount: -1 } }
+    );
+
     // Create active Mentorship
     const mentorship = await MentorshipModel.create({
       studentId: request.studentId,
@@ -161,6 +211,28 @@ export class MentorshipRequestService {
       entityId: mentorship._id.toString(),
       metadata: { newActiveMentees: updatedCapacity.currentActiveMentees },
     });
+
+    // Notify student of acceptance
+    const studentProfile = await StudentProfileModel.findById(request.studentId);
+    if (studentProfile && studentProfile.userId) {
+      await notificationService.sendNotification({
+        userId: studentProfile.userId.toString(),
+        type: 'REQUEST_ACCEPTED',
+        title: 'Mentorship Request Accepted!',
+        message: 'Congratulations! Your mentor has accepted your request. Your mentorship workspace is now active.',
+        metadata: { mentorshipId: mentorship._id.toString() },
+        idempotencyKey: `notif:req_accepted:${mentorship._id.toString()}`,
+      });
+    }
+
+    // Auto-cancel remaining pending requests if capacity is now saturated
+    if (updatedCapacity.currentActiveMentees >= updatedCapacity.maxActiveMentees) {
+      await autoCancelOnFullJob(mentor._id.toString());
+      await MentorCapacityModel.updateOne(
+        { _id: updatedCapacity._id },
+        { $set: { isAcceptingRequests: false } }
+      );
+    }
 
     return { mentorship, request, capacity: updatedCapacity };
   }
@@ -190,6 +262,23 @@ export class MentorshipRequestService {
 
     if (!request) {
       throw new AppError('Pending mentorship request not found.', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    await StudentProfileModel.updateOne(
+      { _id: request.studentId, pendingRequestsCount: { $gt: 0 } },
+      { $inc: { pendingRequestsCount: -1 } }
+    );
+
+    const studentProfile = await StudentProfileModel.findById(request.studentId);
+    if (studentProfile && studentProfile.userId) {
+      await notificationService.sendNotification({
+        userId: studentProfile.userId.toString(),
+        type: 'REQUEST_DECLINED',
+        title: 'Mentorship Request Update',
+        message: 'The mentor was unable to take on additional mentees at this time. You may request another mentor.',
+        metadata: { requestId: request._id.toString() },
+        idempotencyKey: `notif:req_declined:${request._id.toString()}`,
+      });
     }
 
     return request;

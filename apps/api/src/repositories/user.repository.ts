@@ -14,7 +14,41 @@ export class UserRepository {
   }
 
   async updateLastLogin(id: string): Promise<void> {
-    await UserModel.findByIdAndUpdate(id, { lastLoginAt: new Date() });
+    await UserModel.findByIdAndUpdate(id, {
+      lastLoginAt: new Date(),
+      failedLoginAttempts: 0,
+      $unset: { lockoutUntil: 1 },
+    });
+  }
+
+  async recordFailedLogin(id: string): Promise<{ failedAttempts: number; isLocked: boolean; lockoutUntil?: Date }> {
+    const user = await UserModel.findById(id);
+    if (!user) return { failedAttempts: 0, isLocked: false };
+
+    const failedAttempts = (user.failedLoginAttempts || 0) + 1;
+    let lockoutUntil: Date | undefined;
+
+    if (failedAttempts >= 5) {
+      // Lock for 30 minutes
+      lockoutUntil = new Date(Date.now() + 30 * 60 * 1000);
+      await UserModel.findByIdAndUpdate(id, {
+        failedLoginAttempts: failedAttempts,
+        lockoutUntil,
+      });
+      return { failedAttempts, isLocked: true, lockoutUntil };
+    }
+
+    await UserModel.findByIdAndUpdate(id, {
+      failedLoginAttempts: failedAttempts,
+    });
+    return { failedAttempts, isLocked: false };
+  }
+
+  async resetFailedLogins(id: string): Promise<void> {
+    await UserModel.findByIdAndUpdate(id, {
+      failedLoginAttempts: 0,
+      $unset: { lockoutUntil: 1 },
+    });
   }
 
   async updateRole(id: string, role: any): Promise<IUserDocument | null> {
@@ -23,4 +57,3 @@ export class UserRepository {
 }
 
 export const userRepository = new UserRepository();
-

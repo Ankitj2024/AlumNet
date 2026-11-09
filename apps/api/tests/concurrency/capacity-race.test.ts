@@ -5,10 +5,11 @@ import { AlumnusModel } from '../../src/models/Alumnus.model.js';
 import { MentorCapacityModel } from '../../src/models/MentorCapacity.model.js';
 import { StudentProfileModel } from '../../src/models/StudentProfile.model.js';
 import { MentorshipRequestModel } from '../../src/models/MentorshipRequest.model.js';
+import { MentorshipModel } from '../../src/models/Mentorship.model.js';
 import { mentorshipRequestService } from '../../src/services/mentorshipRequest.service.js';
 import { hashPassword } from '../../src/utils/password.util.js';
 
-describe('CONCURRENCY INVARIANT TEST — Mentor Capacity Invariant Protection', () => {
+describe('CONCURRENCY INVARIANT TESTS — Mentor Capacity & Rolling Quota Race Protection', () => {
   beforeAll(async () => {
     await setupTestDatabase();
   });
@@ -21,12 +22,12 @@ describe('CONCURRENCY INVARIANT TEST — Mentor Capacity Invariant Protection', 
     await clearTestDatabase();
   });
 
-  it('MUST NEVER exceed maxActiveMentees under concurrent simultaneous acceptance attempts', async () => {
+  it('MUST NEVER exceed maxActiveMentees under 20 concurrent simultaneous acceptance attempts', async () => {
     const passwordHash = await hashPassword('Secret123!');
 
     // 1. Create a mentor with maximum capacity = 2
     const mentorUser = await UserModel.create({
-      email: 'concurrent.mentor@alumni.edu',
+      email: 'concurrent20.mentor@alumni.edu',
       passwordHash,
       firstName: 'Alan',
       lastName: 'Turing',
@@ -45,17 +46,17 @@ describe('CONCURRENCY INVARIANT TEST — Mentor Capacity Invariant Protection', 
 
     await MentorCapacityModel.create({
       mentorId: mentor._id,
-      maxActiveMentees: 2, // MAXIMUM ALLOWED IS 2
+      maxActiveMentees: 2, // STRICT CEILING: EXACTLY 2
       currentActiveMentees: 0,
       isAcceptingRequests: true,
       isPaused: false,
     });
 
-    // 2. Create 5 different students submitting requests to this mentor
+    // 2. Create 20 different students submitting requests to this mentor
     const requestIds: string[] = [];
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 20; i++) {
       const studentUser = await UserModel.create({
-        email: `student.${i}@university.edu`,
+        email: `student.concurrent.${i}@university.edu`,
         passwordHash,
         firstName: `Student${i}`,
         lastName: 'Test',
@@ -81,7 +82,7 @@ describe('CONCURRENCY INVARIANT TEST — Mentor Capacity Invariant Protection', 
       requestIds.push(request._id.toString());
     }
 
-    // 3. Fire all 5 acceptance requests concurrently at the exact same moment
+    // 3. Fire all 20 acceptance requests concurrently in parallel
     const results = await Promise.allSettled(
       requestIds.map((reqId) =>
         mentorshipRequestService.acceptRequest(mentorUser._id.toString(), reqId)
@@ -92,11 +93,11 @@ describe('CONCURRENCY INVARIANT TEST — Mentor Capacity Invariant Protection', 
     const successful = results.filter((r) => r.status === 'fulfilled');
     const rejected = results.filter((r) => r.status === 'rejected');
 
-    // Exactly 2 must succeed, 3 must be rejected
+    // Exactly 2 must succeed, 18 must be rejected
     expect(successful.length).toBe(2);
-    expect(rejected.length).toBe(3);
+    expect(rejected.length).toBe(18);
 
-    // 5. Invariant check on the database record: capacity must be exactly 2, never 3, 4, or 5
+    // 5. Invariant check on database: capacity must be exactly 2, never exceeding maxActiveMentees
     const finalCapacity = await MentorCapacityModel.findOne({ mentorId: mentor._id });
     expect(finalCapacity?.currentActiveMentees).toBe(2);
     expect(finalCapacity!.currentActiveMentees).toBeLessThanOrEqual(finalCapacity!.maxActiveMentees);
@@ -105,10 +106,7 @@ describe('CONCURRENCY INVARIANT TEST — Mentor Capacity Invariant Protection', 
     const acceptedRequests = await MentorshipRequestModel.find({ mentorId: mentor._id, status: 'ACCEPTED' });
     expect(acceptedRequests.length).toBe(2);
 
-    // Conclude one mentorship
-    const mentorships = await mentorshipRequestService.getStudentRequests(acceptedRequests[0].studentId.toString());
-    // Directly close
-    const activeMentorship = await (await import('../../src/models/Mentorship.model.js')).MentorshipModel.findOne({
+    const activeMentorship = await MentorshipModel.findOne({
       requestId: acceptedRequests[0]._id,
     });
 
@@ -118,5 +116,82 @@ describe('CONCURRENCY INVARIANT TEST — Mentor Capacity Invariant Protection', 
     const capacityAfterClose = await MentorCapacityModel.findOne({ mentorId: mentor._id });
     expect(capacityAfterClose?.currentActiveMentees).toBe(1);
   });
-});
 
+  it('MUST enforce quota limits and rolling window under rapid parallel request creation attempts', async () => {
+    const passwordHash = await hashPassword('Secret123!');
+
+    // 1. Create a student with max pending requests = 3
+    const studentUser = await UserModel.create({
+      email: 'student.quota.race@univ.edu',
+      passwordHash,
+      firstName: 'Speedy',
+      lastName: 'Student',
+      role: 'STUDENT',
+      status: 'ACTIVE',
+    });
+
+    await StudentProfileModel.create({
+      userId: studentUser._id,
+      academicProgramme: 'B.Tech',
+      department: 'Computer Science',
+    });
+
+    // 2. Create 10 different verified alumni mentors
+    const mentorIds: string[] = [];
+    for (let i = 1; i <= 10; i++) {
+      const mentorUser = await UserModel.create({
+        email: `mentor.quota.${i}@alumni.edu`,
+        passwordHash,
+        firstName: `Mentor${i}`,
+        lastName: 'Alum',
+        role: 'ALUMNI_MENTOR',
+        status: 'ACTIVE',
+      });
+
+      const mentor = await AlumnusModel.create({
+        userId: mentorUser._id,
+        professionalDesignation: 'Staff Engineer',
+        organisation: 'Tech Corp',
+        industry: 'Software',
+        verificationStatus: 'VERIFIED',
+        isSearchable: true,
+      });
+
+      await MentorCapacityModel.create({
+        mentorId: mentor._id,
+        maxActiveMentees: 2,
+        currentActiveMentees: 0,
+        isAcceptingRequests: true,
+        isPaused: false,
+      });
+
+      mentorIds.push(mentor._id.toString());
+    }
+
+    // 3. Student fires 10 simultaneous request creation calls in parallel
+    const requestPromises = mentorIds.map((mId) =>
+      mentorshipRequestService.createRequest(studentUser._id.toString(), {
+        mentorId: mId,
+        careerObjective: 'Career guidance and interview preparation',
+        requestMessage: 'Would love your guidance on system design and algorithms.',
+      })
+    );
+
+    const results = await Promise.allSettled(requestPromises);
+
+    const successful = results.filter((r) => r.status === 'fulfilled');
+    const rejected = results.filter((r) => r.status === 'rejected');
+
+    // Exactly 3 can be pending at any time (as per PROGRAMME_DEFAULTS.MAX_PENDING_REQUESTS_PER_STUDENT)
+    expect(successful.length).toBe(3);
+    expect(rejected.length).toBe(7);
+
+    // Verify in database: exactly 3 pending requests exist for this student
+    const studentProfile = await StudentProfileModel.findOne({ userId: studentUser._id });
+    const pendingCount = await MentorshipRequestModel.countDocuments({
+      studentId: studentProfile?._id,
+      status: 'PENDING',
+    });
+    expect(pendingCount).toBe(3);
+  });
+});

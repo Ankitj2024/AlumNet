@@ -4,6 +4,7 @@ import { config } from '@p11/config';
 import { createApp } from './app.js';
 import { connectDatabase, disconnectDatabase } from './config/database.js';
 import { logger } from './config/logger.js';
+import { setSocketIO } from './utils/socket.util.js';
 
 async function bootstrap() {
   const app = createApp();
@@ -17,8 +18,15 @@ async function bootstrap() {
     },
   });
 
+  setSocketIO(io);
+
   io.on('connection', (socket) => {
     logger.debug(`Socket client connected: ${socket.id}`);
+    socket.on('join', (userId: string) => {
+      if (userId) {
+        socket.join(`user:${userId}`);
+      }
+    });
     socket.on('disconnect', () => {
       logger.debug(`Socket client disconnected: ${socket.id}`);
     });

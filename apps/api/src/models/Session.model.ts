@@ -14,6 +14,10 @@ export interface ISessionDocument extends Document {
   mentorNotes?: string;
   sharedNotes?: string;
   cancellationReason?: string;
+  reminded24h?: boolean;
+  reminded1h?: boolean;
+  studentRating?: number;
+  studentFeedback?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,7 +45,7 @@ const SessionSchema = new Schema<ISessionDocument>(
     },
     status: {
       type: String,
-      enum: ['PROPOSED', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'RESCHEDULED'],
+      enum: ['PROPOSED', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'RESCHEDULED', 'NO_SHOW'],
       default: 'PROPOSED',
       index: true,
     },
@@ -67,6 +71,23 @@ const SessionSchema = new Schema<ISessionDocument>(
       trim: true,
     },
     cancellationReason: {
+      type: String,
+      trim: true,
+    },
+    reminded24h: {
+      type: Boolean,
+      default: false,
+    },
+    reminded1h: {
+      type: Boolean,
+      default: false,
+    },
+    studentRating: {
+      type: Number,
+      min: 1,
+      max: 5,
+    },
+    studentFeedback: {
       type: String,
       trim: true,
     },

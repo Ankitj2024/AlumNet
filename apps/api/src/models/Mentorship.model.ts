@@ -11,6 +11,8 @@ export interface IMentorshipDocument extends Document {
   startDate: Date;
   endDate?: Date;
   lastMeaningfulActivityAt: Date;
+  lastNudgeAt?: Date;
+  dormantEnteredAt?: Date;
   totalSessionsCompleted: number;
   closureReason?: string;
   createdAt: Date;
@@ -59,6 +61,12 @@ const MentorshipSchema = new Schema<IMentorshipDocument>(
     lastMeaningfulActivityAt: {
       type: Date,
       default: Date.now,
+    },
+    lastNudgeAt: {
+      type: Date,
+    },
+    dormantEnteredAt: {
+      type: Date,
     },
     totalSessionsCompleted: {
       type: Number,

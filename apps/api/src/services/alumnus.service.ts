@@ -1,6 +1,7 @@
 import { UpdateMentorProfileInput, UpdateMentorCapacityInput } from '@p11/validation';
 import { AppError, ErrorCodes } from '@p11/shared';
 import { alumnusRepository } from '../repositories/alumnus.repository.js';
+import { programmeSettingsService } from './programmeSettings.service.js';
 import { serializeStudentViewAlumnus, serializeAdminAlumnus } from '../serializers/alumni.serializer.js';
 
 export class AlumnusService {
@@ -41,6 +42,18 @@ export class AlumnusService {
     const alumnus = await alumnusRepository.findByUserId(userId);
     if (!alumnus) {
       throw new AppError('Alumnus profile not found.', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    if (input.maxActiveMentees !== undefined) {
+      const settings = await programmeSettingsService.getSettings();
+      const { minMentorCapacity, maxMentorCapacity } = settings.capacityBounds;
+      if (input.maxActiveMentees < minMentorCapacity || input.maxActiveMentees > maxMentorCapacity) {
+        throw new AppError(
+          `Mentee capacity must be between ${minMentorCapacity} and ${maxMentorCapacity}.`,
+          400,
+          ErrorCodes.VALIDATION_ERROR
+        );
+      }
     }
 
     const capacity = await alumnusRepository.upsertCapacity(alumnus._id.toString(), {

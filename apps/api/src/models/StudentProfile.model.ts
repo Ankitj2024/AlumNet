@@ -13,6 +13,7 @@ export interface IStudentProfileDocument extends Document {
   preferredCommunicationFrequency: 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
   timeZone: string;
   profileCompletionScore: number;
+  pendingRequestsCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -68,6 +69,10 @@ const StudentProfileSchema = new Schema<IStudentProfileDocument>(
       default: 'UTC',
     },
     profileCompletionScore: {
+      type: Number,
+      default: 0,
+    },
+    pendingRequestsCount: {
       type: Number,
       default: 0,
     },

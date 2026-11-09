@@ -162,3 +162,4 @@ ALUM-2021-ME-044,Marcus Vance,2021,Mechanical Engineering,B.Tech Mechanical,marc
     </div>
   );
 }
+

@@ -60,6 +60,10 @@ function LoginForm() {
     await executeLogin(demoEmail, 'DemoPassword123!');
   };
 
+  const isDemoLoginEnabled =
+    process.env.NODE_ENV !== 'production' &&
+    (process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN === 'true' || process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN === undefined);
+
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-[#f5f5f7]">
       <div className="max-w-md w-full space-y-6">
@@ -84,100 +88,102 @@ function LoginForm() {
         )}
 
         {/* Demo Fast Login Station */}
-        <div className="apple-card p-5 bg-white border border-black/[0.06] shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-xs font-bold text-neutral-900 flex items-center gap-1.5">
-              <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
-              1-Click Demo Login Station
+        {isDemoLoginEnabled && (
+          <div className="apple-card p-5 bg-white border border-black/[0.06] shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-xs font-bold text-neutral-900 flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+                1-Click Demo Login Station
+              </div>
+              <span className="text-[10px] text-neutral-400 font-medium">Pre-authenticated</span>
             </div>
-            <span className="text-[10px] text-neutral-400 font-medium">Pre-authenticated</span>
+            <p className="text-[11px] text-neutral-500 mb-3">
+              Click any institutional role below to instantly authenticate and navigate into that dedicated portal:
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Student Demo */}
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => handleInstantDemoLogin('student.demo@university.edu', 'Student')}
+                className="p-3 rounded-xl border border-neutral-200/80 bg-neutral-50/60 hover:bg-neutral-100 hover:border-blue-300 text-left transition flex items-start gap-2.5 group"
+              >
+                <div className="p-2 rounded-lg bg-blue-50 text-blue-600 shrink-0 group-hover:scale-105 transition">
+                  <GraduationCap className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-xs text-neutral-900 flex items-center justify-between">
+                    <span>Student Portal</span>
+                    <ArrowRight className="w-3 h-3 text-neutral-400 group-hover:translate-x-0.5 transition" />
+                  </div>
+                  <div className="text-[10px] text-neutral-400 truncate">student.demo@university.edu</div>
+                  <div className="text-[9px] text-blue-600 font-medium mt-0.5">Routes to /student</div>
+                </div>
+              </button>
+
+              {/* Mentor Demo */}
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => handleInstantDemoLogin('mentor.demo@alumni.edu', 'Mentor')}
+                className="p-3 rounded-xl border border-neutral-200/80 bg-neutral-50/60 hover:bg-neutral-100 hover:border-emerald-300 text-left transition flex items-start gap-2.5 group"
+              >
+                <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600 shrink-0 group-hover:scale-105 transition">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-xs text-neutral-900 flex items-center justify-between">
+                    <span>Alumni Mentor</span>
+                    <ArrowRight className="w-3 h-3 text-neutral-400 group-hover:translate-x-0.5 transition" />
+                  </div>
+                  <div className="text-[10px] text-neutral-400 truncate">mentor.demo@alumni.edu</div>
+                  <div className="text-[9px] text-emerald-600 font-medium mt-0.5">Routes to /mentor</div>
+                </div>
+              </button>
+
+              {/* Officer Demo */}
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => handleInstantDemoLogin('officer.demo@university.edu', 'Officer')}
+                className="p-3 rounded-xl border border-neutral-200/80 bg-neutral-50/60 hover:bg-neutral-100 hover:border-amber-300 text-left transition flex items-start gap-2.5 group"
+              >
+                <div className="p-2 rounded-lg bg-amber-50 text-amber-600 shrink-0 group-hover:scale-105 transition">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-xs text-neutral-900 flex items-center justify-between">
+                    <span>Relations Officer</span>
+                    <ArrowRight className="w-3 h-3 text-neutral-400 group-hover:translate-x-0.5 transition" />
+                  </div>
+                  <div className="text-[10px] text-neutral-400 truncate">officer.demo@university.edu</div>
+                  <div className="text-[9px] text-amber-600 font-medium mt-0.5">Routes to /officer</div>
+                </div>
+              </button>
+
+              {/* Admin Demo */}
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => handleInstantDemoLogin('admin.demo@university.edu', 'Admin')}
+                className="p-3 rounded-xl border border-neutral-200/80 bg-neutral-50/60 hover:bg-neutral-100 hover:border-purple-300 text-left transition flex items-start gap-2.5 group"
+              >
+                <div className="p-2 rounded-lg bg-purple-50 text-purple-600 shrink-0 group-hover:scale-105 transition">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-xs text-neutral-900 flex items-center justify-between">
+                    <span>Super Admin</span>
+                    <ArrowRight className="w-3 h-3 text-neutral-400 group-hover:translate-x-0.5 transition" />
+                  </div>
+                  <div className="text-[10px] text-neutral-400 truncate">admin.demo@university.edu</div>
+                  <div className="text-[9px] text-purple-600 font-medium mt-0.5">Routes to /officer</div>
+                </div>
+              </button>
+            </div>
           </div>
-          <p className="text-[11px] text-neutral-500 mb-3">
-            Click any institutional role below to instantly authenticate and navigate into that dedicated portal:
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {/* Student Demo */}
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => handleInstantDemoLogin('student.demo@university.edu', 'Student')}
-              className="p-3 rounded-xl border border-neutral-200/80 bg-neutral-50/60 hover:bg-neutral-100 hover:border-blue-300 text-left transition flex items-start gap-2.5 group"
-            >
-              <div className="p-2 rounded-lg bg-blue-50 text-blue-600 shrink-0 group-hover:scale-105 transition">
-                <GraduationCap className="w-4 h-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-semibold text-xs text-neutral-900 flex items-center justify-between">
-                  <span>Student Portal</span>
-                  <ArrowRight className="w-3 h-3 text-neutral-400 group-hover:translate-x-0.5 transition" />
-                </div>
-                <div className="text-[10px] text-neutral-400 truncate">student.demo@university.edu</div>
-                <div className="text-[9px] text-blue-600 font-medium mt-0.5">Routes to /student</div>
-              </div>
-            </button>
-
-            {/* Mentor Demo */}
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => handleInstantDemoLogin('mentor.demo@alumni.edu', 'Mentor')}
-              className="p-3 rounded-xl border border-neutral-200/80 bg-neutral-50/60 hover:bg-neutral-100 hover:border-emerald-300 text-left transition flex items-start gap-2.5 group"
-            >
-              <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600 shrink-0 group-hover:scale-105 transition">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-semibold text-xs text-neutral-900 flex items-center justify-between">
-                  <span>Alumni Mentor</span>
-                  <ArrowRight className="w-3 h-3 text-neutral-400 group-hover:translate-x-0.5 transition" />
-                </div>
-                <div className="text-[10px] text-neutral-400 truncate">mentor.demo@alumni.edu</div>
-                <div className="text-[9px] text-emerald-600 font-medium mt-0.5">Routes to /mentor</div>
-              </div>
-            </button>
-
-            {/* Officer Demo */}
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => handleInstantDemoLogin('officer.demo@university.edu', 'Officer')}
-              className="p-3 rounded-xl border border-neutral-200/80 bg-neutral-50/60 hover:bg-neutral-100 hover:border-amber-300 text-left transition flex items-start gap-2.5 group"
-            >
-              <div className="p-2 rounded-lg bg-amber-50 text-amber-600 shrink-0 group-hover:scale-105 transition">
-                <Building2 className="w-4 h-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-semibold text-xs text-neutral-900 flex items-center justify-between">
-                  <span>Relations Officer</span>
-                  <ArrowRight className="w-3 h-3 text-neutral-400 group-hover:translate-x-0.5 transition" />
-                </div>
-                <div className="text-[10px] text-neutral-400 truncate">officer.demo@university.edu</div>
-                <div className="text-[9px] text-amber-600 font-medium mt-0.5">Routes to /officer</div>
-              </div>
-            </button>
-
-            {/* Admin Demo */}
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => handleInstantDemoLogin('admin.demo@university.edu', 'Admin')}
-              className="p-3 rounded-xl border border-neutral-200/80 bg-neutral-50/60 hover:bg-neutral-100 hover:border-purple-300 text-left transition flex items-start gap-2.5 group"
-            >
-              <div className="p-2 rounded-lg bg-purple-50 text-purple-600 shrink-0 group-hover:scale-105 transition">
-                <Users className="w-4 h-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-semibold text-xs text-neutral-900 flex items-center justify-between">
-                  <span>Super Admin</span>
-                  <ArrowRight className="w-3 h-3 text-neutral-400 group-hover:translate-x-0.5 transition" />
-                </div>
-                <div className="text-[10px] text-neutral-400 truncate">admin.demo@university.edu</div>
-                <div className="text-[9px] text-purple-600 font-medium mt-0.5">Routes to /officer</div>
-              </div>
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* Manual Login Form */}
         <form onSubmit={handleManualSubmit} className="apple-card p-6 bg-white space-y-4 border border-black/[0.06]">

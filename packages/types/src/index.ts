@@ -10,6 +10,7 @@ export type UserStatus =
   | 'ACTIVE'
   | 'SUSPENDED'
   | 'DEACTIVATED'
+  | 'DELETED'
   | 'PENDING_EMAIL_VERIFICATION';
 
 // Verification Lifecycle
@@ -33,7 +34,8 @@ export type MentorshipRequestStatus =
   | 'ACCEPTED'
   | 'DECLINED'
   | 'EXPIRED'
-  | 'CANCELLED';
+  | 'CANCELLED'
+  | 'AUTO_CANCELLED';
 
 export type MentorshipStatus =
   | 'ACTIVE'
@@ -52,7 +54,8 @@ export type SessionStatus =
   | 'CONFIRMED'
   | 'COMPLETED'
   | 'CANCELLED'
-  | 'RESCHEDULED';
+  | 'RESCHEDULED'
+  | 'NO_SHOW';
 
 export type CalendarProvider = 'GOOGLE' | 'OUTLOOK' | 'NONE';
 

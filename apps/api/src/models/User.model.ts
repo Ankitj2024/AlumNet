@@ -16,6 +16,10 @@ export interface IUserDocument extends Document {
   mfaSecret?: string;
   mfaEnabled: boolean;
   lastLoginAt?: Date;
+  failedLoginAttempts: number;
+  lockoutUntil?: Date;
+  deletedAt?: Date;
+  purgeScheduledAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -58,8 +62,16 @@ const UserSchema = new Schema<IUserDocument>(
     },
     status: {
       type: String,
-      enum: ['ACTIVE', 'SUSPENDED', 'DEACTIVATED', 'PENDING_EMAIL_VERIFICATION'],
+      enum: ['ACTIVE', 'SUSPENDED', 'DEACTIVATED', 'DELETED', 'PENDING_EMAIL_VERIFICATION'],
       default: 'ACTIVE',
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+      index: true,
+    },
+    purgeScheduledAt: {
+      type: Date,
       index: true,
     },
     isEmailVerified: {
@@ -87,6 +99,13 @@ const UserSchema = new Schema<IUserDocument>(
       default: false,
     },
     lastLoginAt: {
+      type: Date,
+    },
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockoutUntil: {
       type: Date,
     },
   },

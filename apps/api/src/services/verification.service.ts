@@ -4,6 +4,7 @@ import { verificationRepository } from '../repositories/verification.repository.
 import { institutionalRecordRepository } from '../repositories/institutionalRecord.repository.js';
 import { alumnusRepository } from '../repositories/alumnus.repository.js';
 import { auditService } from './audit.service.js';
+import { notificationService } from './notification.service.js';
 import { parse } from 'csv-parse/sync';
 
 export class VerificationService {
@@ -150,6 +151,27 @@ export class VerificationService {
       verificationStatus: input.status,
       isSearchable: isVerified,
     });
+
+    const alumnusDoc = await alumnusRepository.findById(request.alumnusId.toString());
+    const targetUserId =
+      (request.userId as any)?._id?.toString() ||
+      (request.userId as any)?.toString() ||
+      (alumnusDoc?.userId as any)?._id?.toString() ||
+      alumnusDoc?.userId?.toString();
+
+    if (targetUserId) {
+      const isApproved = input.status === 'VERIFIED';
+      await notificationService.sendNotification({
+        userId: targetUserId,
+        type: 'VERIFICATION_RESULT',
+        title: isApproved ? 'Institutional Identity Verified!' : 'Verification Review Update',
+        message: isApproved
+          ? 'Your alumni credentials have been verified by institutional administration. Your profile is now visible for student mentorship requests.'
+          : `Verification status updated: ${input.status}. ${input.rejectionReason || input.reviewNotes || ''}`,
+        metadata: { status: input.status, requestId },
+        idempotencyKey: `notif:verif_result:${requestId}:${input.status}`,
+      });
+    }
 
     await auditService.log({
       actorId: officerId,

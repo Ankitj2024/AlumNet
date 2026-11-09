@@ -15,7 +15,12 @@ export class MessagingController {
   async getMessages(req: Request, res: Response) {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 50;
-    const result = await messagingService.getMessages(req.params.mentorshipId, page, limit);
+    const result = await messagingService.getMessages(
+      req.user!.userId,
+      req.params.mentorshipId,
+      page,
+      limit
+    );
     res.status(200).json(
       createSuccessResponse(result.messages, {
         page: result.page,
@@ -29,7 +34,17 @@ export class MessagingController {
     const result = await messagingService.markAsRead(req.user!.userId, req.params.mentorshipId);
     res.status(200).json(createSuccessResponse(result));
   }
+
+  async decryptForModeration(req: Request, res: Response) {
+    const result = await messagingService.decryptForModeration(
+      req.user!.userId,
+      req.params.messageId,
+      req.body.reason,
+      req.ip,
+      req.headers['user-agent']
+    );
+    res.status(200).json(createSuccessResponse(result));
+  }
 }
 
 export const messagingController = new MessagingController();
-

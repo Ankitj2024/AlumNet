@@ -13,6 +13,7 @@ router.get('/:id', authenticate, asyncHandler(mentorshipController.getMentorship
 router.post('/:id/close', authenticate, asyncHandler(mentorshipController.close.bind(mentorshipController)));
 
 // Sessions
+router.get('/:id/sessions', authenticate, asyncHandler(mentorshipController.getSessions.bind(mentorshipController)));
 router.post(
   '/:id/sessions',
   authenticate,
@@ -28,6 +29,31 @@ router.post(
   '/:id/sessions/:sessionId/cancel',
   authenticate,
   asyncHandler(mentorshipController.cancelSession.bind(mentorshipController))
+);
+router.post(
+  '/:id/sessions/:sessionId/reschedule',
+  authenticate,
+  asyncHandler(mentorshipController.rescheduleSession.bind(mentorshipController))
+);
+router.post(
+  '/:id/sessions/:sessionId/no-show',
+  authenticate,
+  asyncHandler(mentorshipController.recordNoShow.bind(mentorshipController))
+);
+router.post(
+  '/:id/sessions/:sessionId/notes',
+  authenticate,
+  asyncHandler(mentorshipController.recordSessionNotes.bind(mentorshipController))
+);
+router.post(
+  '/:id/sessions/:sessionId/rating',
+  authenticate,
+  asyncHandler(mentorshipController.submitStudentRating.bind(mentorshipController))
+);
+router.get(
+  '/:id/sessions/:sessionId/ics',
+  authenticate,
+  asyncHandler(mentorshipController.downloadIcs.bind(mentorshipController))
 );
 
 // Goals & Action Items

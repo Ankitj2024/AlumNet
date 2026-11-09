@@ -125,3 +125,33 @@ export const proposeSessionSchema = z.object({
 });
 export type ProposeSessionInput = z.infer<typeof proposeSessionSchema>;
 
+// Session Reschedule Schema
+export const rescheduleSessionSchema = z.object({
+  scheduledStartTime: z.coerce.date(),
+  scheduledEndTime: z.coerce.date(),
+  timeZone: z.string().default('UTC'),
+  reason: z.string().trim().max(500).optional(),
+});
+export type RescheduleSessionInput = z.infer<typeof rescheduleSessionSchema>;
+
+// Session Notes Schema
+export const sessionNotesSchema = z.object({
+  mentorNotes: z.string().trim().max(2000).optional(),
+  sharedNotes: z.string().trim().max(2000).optional(),
+});
+export type SessionNotesInput = z.infer<typeof sessionNotesSchema>;
+
+// Session Rating Schema
+export const sessionFeedbackSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  feedback: z.string().trim().max(1000).optional(),
+});
+export type SessionFeedbackInput = z.infer<typeof sessionFeedbackSchema>;
+
+// Session Cancel Schema
+export const cancelSessionSchema = z.object({
+  reason: z.string().trim().min(3, 'Cancellation reason required').max(500),
+});
+export type CancelSessionInput = z.infer<typeof cancelSessionSchema>;
+
+

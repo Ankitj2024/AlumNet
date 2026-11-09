@@ -44,3 +44,44 @@ export async function fetchApi<T>(
   }
 }
 
+export const api = {
+  get: async <T = any>(endpoint: string, options: { params?: Record<string, any> } = {}) => {
+    let url = endpoint;
+    if (options.params) {
+      const q = new URLSearchParams();
+      Object.entries(options.params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') q.append(k, String(v));
+      });
+      const qs = q.toString();
+      if (qs) url += `${url.includes('?') ? '&' : '?'}${qs}`;
+    }
+    const res = await fetchApi<T>(url, { method: 'GET' });
+    return { data: res };
+  },
+  post: async <T = any>(endpoint: string, data?: any) => {
+    const res = await fetchApi<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+    return { data: res };
+  },
+  put: async <T = any>(endpoint: string, data?: any) => {
+    const res = await fetchApi<T>(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+    return { data: res };
+  },
+  patch: async <T = any>(endpoint: string, data?: any) => {
+    const res = await fetchApi<T>(endpoint, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+    return { data: res };
+  },
+  delete: async <T = any>(endpoint: string) => {
+    const res = await fetchApi<T>(endpoint, { method: 'DELETE' });
+    return { data: res };
+  },
+};
+

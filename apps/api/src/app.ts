@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
+import mongoSanitize from 'express-mongo-sanitize';
 import { config } from '@p11/config';
 import routes from './routes/index.js';
 import { notFoundHandler } from './middleware/notFound.middleware.js';
@@ -28,6 +29,9 @@ export function createApp() {
   app.use(cookieParser(config.COOKIE_SECRET));
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Mongo sanitization against query injection
+  app.use(mongoSanitize());
 
   // Logging
   if (config.NODE_ENV !== 'test') {

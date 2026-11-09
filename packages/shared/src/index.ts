@@ -40,6 +40,8 @@ export class AppError extends Error {
   }
 }
 
+export * from './privacyFilter.js';
+
 // PII Detection and Scrubbing Engine
 // Multi-pass regex for emails, phone numbers, and external messaging links
 const EMAIL_REGEX = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/gi;

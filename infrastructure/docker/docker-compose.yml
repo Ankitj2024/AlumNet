@@ -45,6 +45,14 @@ services:
       redis:
         condition: service_started
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: p11-mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
 volumes:
   mongo-data:
   redis-data:

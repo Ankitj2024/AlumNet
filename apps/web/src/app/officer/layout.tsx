@@ -10,6 +10,9 @@ import {
   FileSpreadsheet,
   Activity,
   Building2,
+  Sliders,
+  ShieldAlert,
+  History,
 } from 'lucide-react';
 
 interface OfficerLayoutProps {
@@ -19,8 +22,11 @@ interface OfficerLayoutProps {
 const navItems = [
   { href: '/officer', label: 'Overview', icon: LayoutDashboard, exact: true },
   { href: '/officer/verifications', label: 'Verification Queue', icon: ShieldCheck },
+  { href: '/officer/moderation', label: 'Moderation Queue', icon: ShieldAlert },
+  { href: '/officer/audit-logs', label: 'Audit Ledger', icon: History },
   { href: '/officer/registrar-sync', label: 'Registrar CSV Sync', icon: FileSpreadsheet },
   { href: '/officer/mentorships', label: 'Health Oversight', icon: Activity },
+  { href: '/officer/policy', label: 'Programme Policy', icon: Sliders },
 ];
 
 export default function OfficerLayout({ children }: OfficerLayoutProps) {
@@ -82,3 +88,4 @@ export default function OfficerLayout({ children }: OfficerLayoutProps) {
     </ProtectedRoute>
   );
 }
+

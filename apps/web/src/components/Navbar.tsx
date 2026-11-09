@@ -12,6 +12,7 @@ import {
   Compass,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { NotificationBell } from './NotificationBell';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -88,6 +89,8 @@ export function Navbar() {
 
           {/* User Status / Auth Actions */}
           <div className="flex items-center gap-2.5">
+            {isAuthenticated && user && <NotificationBell />}
+
             {isAuthenticated && user ? (
               <div className="flex items-center gap-2 bg-neutral-100/80 pl-2.5 pr-1.5 py-1 rounded-full border border-neutral-200/60">
                 <span className="text-[11px] font-semibold text-neutral-800">

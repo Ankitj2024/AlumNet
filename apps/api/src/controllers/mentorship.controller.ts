@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { createSuccessResponse } from '@p11/shared';
+import { createSuccessResponse, createErrorResponse, ErrorCodes } from '@p11/shared';
 import { MentorshipModel } from '../models/Mentorship.model.js';
 import { StudentProfileModel } from '../models/StudentProfile.model.js';
 import { AlumnusModel } from '../models/Alumnus.model.js';
@@ -55,14 +55,40 @@ export class MentorshipController {
       feedbackService.getMentorshipFeedback(req.params.id),
     ]);
 
+    const isMentor = req.user?.role === 'ALUMNI_MENTOR';
+    const sanitizedSessions = sessions.map((s) => {
+      const obj = s.toObject ? s.toObject() : { ...s };
+      if (!isMentor) {
+        delete obj.mentorNotes;
+      }
+      return obj;
+    });
+
     res.status(200).json(
       createSuccessResponse({
         mentorship,
-        sessions,
+        sessions: sanitizedSessions,
         goals,
         feedback,
       })
     );
+  }
+
+  async getSessions(req: Request, res: Response) {
+    const mentorship = await MentorshipModel.findById(req.params.id);
+    if (!mentorship) {
+      return res.status(404).json(createErrorResponse(ErrorCodes.NOT_FOUND, 'Mentorship not found'));
+    }
+    const isMentor = req.user?.role === 'ALUMNI_MENTOR';
+    const sessions = await schedulingService.getMentorshipSessions(req.params.id);
+    const sanitized = sessions.map((s) => {
+      const obj = s.toObject ? s.toObject() : { ...s };
+      if (!isMentor) {
+        delete obj.mentorNotes;
+      }
+      return obj;
+    });
+    res.status(200).json(createSuccessResponse(sanitized));
   }
 
   async close(req: Request, res: Response) {
@@ -99,6 +125,52 @@ export class MentorshipController {
       req.body?.reason
     );
     res.status(200).json(createSuccessResponse(result));
+  }
+
+  async rescheduleSession(req: Request, res: Response) {
+    const result = await schedulingService.rescheduleSession(
+      req.user!.userId,
+      req.params.sessionId,
+      req.body
+    );
+    res.status(200).json(createSuccessResponse(result));
+  }
+
+  async recordNoShow(req: Request, res: Response) {
+    const result = await schedulingService.recordNoShow(
+      req.user!.userId,
+      req.params.sessionId,
+      req.body?.notes
+    );
+    res.status(200).json(createSuccessResponse(result));
+  }
+
+  async recordSessionNotes(req: Request, res: Response) {
+    const result = await schedulingService.recordSessionNotes(
+      req.user!.userId,
+      req.params.sessionId,
+      req.body
+    );
+    res.status(200).json(createSuccessResponse(result));
+  }
+
+  async submitStudentRating(req: Request, res: Response) {
+    const result = await schedulingService.submitStudentRating(
+      req.user!.userId,
+      req.params.sessionId,
+      req.body
+    );
+    res.status(200).json(createSuccessResponse(result));
+  }
+
+  async downloadIcs(req: Request, res: Response) {
+    const icsContent = await schedulingService.generateIcsFile(req.params.sessionId);
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="mentorship-session-${req.params.sessionId}.ics"`
+    );
+    res.send(icsContent);
   }
 
   // Goals & Action Items
